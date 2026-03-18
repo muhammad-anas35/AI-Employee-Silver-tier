@@ -17,6 +17,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from rate_limiter import RateLimiter
+
 # Gmail API imports
 try:
     from google.auth.transport.requests import Request
@@ -30,14 +35,14 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
 PLANS = VAULT_PATH / "Plans"
 PENDING_APPROVAL = VAULT_PATH / "Pending_Approval"
 APPROVED = VAULT_PATH / "Approved"
 DONE = VAULT_PATH / "Done"
 LOGS = VAULT_PATH / "Logs"
-CREDENTIALS_FILE = Path(__file__).parent / "credentials.json"
-TOKEN_FILE = Path(__file__).parent / "token.json"
+CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent / "credentials.json"
+TOKEN_FILE = Path(__file__).parent.parent.parent.parent / "token.json"
 KNOWN_CONTACTS_FILE = VAULT_PATH / "known_contacts.json"
 
 # Gmail API scopes (includes send permission)
@@ -70,6 +75,9 @@ class EmailSender:
         self.done = vault_path / "Done"
         self.service = None
         self.known_contacts = self._load_known_contacts()
+
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter()
 
         # Ensure folders exist
         for folder in [self.plans, self.pending_approval, self.approved, self.done, LOGS]:
@@ -259,6 +267,12 @@ Add any modifications or notes here.
                    attachments: List[str] = None) -> bool:
         """Send email via Gmail API"""
         try:
+            # Check rate limit before sending
+            can_send, wait_time = self.rate_limiter.can_perform("email_send")
+            if not can_send:
+                logger.error(f"Rate limit exceeded. Wait {wait_time:.0f} seconds before sending.")
+                return False
+
             # Create message
             message = MIMEMultipart() if attachments else MIMEText(body)
             message['to'] = to
@@ -289,6 +303,9 @@ Add any modifications or notes here.
 
             logger.info(f"Email sent successfully to {to}")
             logger.info(f"Message ID: {send_message['id']}")
+
+            # Record action in rate limiter
+            self.rate_limiter.record_action("email_send")
 
             # Add to known contacts if new
             if not self.is_known_contact(to):

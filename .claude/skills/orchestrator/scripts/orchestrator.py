@@ -305,9 +305,28 @@ class Orchestrator:
 
             logger.info(f"Found {len(task_files)} task(s) to process")
 
-            # Note: In production, this would trigger Claude Code
-            # For now, just log
-            logger.info("Claude Code processing would be triggered here")
+            # Trigger Claude Code to process tasks
+            try:
+                result = subprocess.run(
+                    ["claude", "/process-vault-tasks", "--vault-path", str(self.vault_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=300  # 5 minute timeout
+                )
+
+                if result.returncode == 0:
+                    logger.info("✓ Claude Code processed vault tasks successfully")
+                else:
+                    logger.warning(f"Claude Code returned non-zero exit code: {result.returncode}")
+                    if result.stderr:
+                        logger.warning(f"Error output: {result.stderr}")
+
+            except subprocess.TimeoutExpired:
+                logger.error("Claude Code processing timed out after 5 minutes")
+            except FileNotFoundError:
+                logger.error("Claude Code CLI not found. Is it installed and in PATH?")
+            except Exception as e:
+                logger.error(f"Error calling Claude Code: {e}")
 
         except Exception as e:
             logger.error(f"Error processing vault tasks: {e}")
@@ -325,8 +344,28 @@ class Orchestrator:
                 "activity": f"Orchestrator health check at {datetime.now().strftime('%H:%M')}"
             }
 
-            # Note: In production, this would call update-dashboard skill
-            logger.info(f"Dashboard metrics: {metrics}")
+            # Call update-dashboard skill
+            try:
+                result = subprocess.run(
+                    ["claude", "/update-dashboard", "--vault-path", str(self.vault_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=60  # 1 minute timeout
+                )
+
+                if result.returncode == 0:
+                    logger.info("✓ Dashboard updated successfully")
+                else:
+                    logger.warning(f"Dashboard update returned non-zero exit code: {result.returncode}")
+
+            except subprocess.TimeoutExpired:
+                logger.error("Dashboard update timed out")
+            except FileNotFoundError:
+                logger.warning("Claude Code CLI not found, logging metrics instead")
+                logger.info(f"Dashboard metrics: {metrics}")
+            except Exception as e:
+                logger.error(f"Error calling update-dashboard: {e}")
+                logger.info(f"Dashboard metrics: {metrics}")
 
         except Exception as e:
             logger.error(f"Error updating dashboard: {e}")

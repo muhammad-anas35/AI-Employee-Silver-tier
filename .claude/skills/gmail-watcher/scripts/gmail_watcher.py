@@ -8,10 +8,15 @@ import os
 import sys
 import time
 import json
-import logging
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from base_watcher import BaseWatcher
+from retry_handler import with_retry, TransientError
 
 # Gmail API imports
 try:
@@ -26,41 +31,22 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent / "AI_Employee_Vault"
-NEEDS_ACTION = VAULT_PATH / "Needs_Action"
-LOGS = VAULT_PATH / "Logs"
-CREDENTIALS_FILE = Path(__file__).parent.parent / "credentials.json"
-TOKEN_FILE = Path(__file__).parent.parent / "token.json"
-PROCESSED_FILE = Path(__file__).parent.parent / ".processed_emails"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
+CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent / "credentials.json"
+TOKEN_FILE = Path(__file__).parent.parent.parent.parent / "token.json"
+PROCESSED_FILE = Path(__file__).parent.parent.parent.parent / ".processed_emails"
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOGS / "gmail_watcher.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("GmailWatcher")
 
-
-class GmailWatcher:
+class GmailWatcher(BaseWatcher):
     """Monitors Gmail inbox for important emails"""
 
     def __init__(self, vault_path: Path = VAULT_PATH, check_interval: int = 120):
-        self.vault_path = vault_path
-        self.needs_action = vault_path / "Needs_Action"
-        self.check_interval = check_interval
+        super().__init__(vault_path, check_interval, "GmailWatcher")
         self.service = None
         self.processed_ids = self._load_processed_ids()
-
-        # Ensure folders exist
-        self.needs_action.mkdir(parents=True, exist_ok=True)
-        LOGS.mkdir(parents=True, exist_ok=True)
 
     def _load_processed_ids(self) -> set:
         """Load set of already processed email IDs"""
@@ -80,6 +66,7 @@ class GmailWatcher:
         except Exception as e:
             logger.error(f"Could not save processed IDs: {e}")
 
+    @with_retry(max_attempts=3, base_delay=2, max_delay=30)
     def authenticate(self):
         """Authenticate with Gmail API using OAuth2"""
         creds = None
@@ -89,29 +76,29 @@ class GmailWatcher:
             try:
                 creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
             except Exception as e:
-                logger.warning(f"Could not load token: {e}")
+                self.logger.warning(f"Could not load token: {e}")
 
         # Refresh or get new credentials
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
-                    logger.info("Token refreshed successfully")
+                    self.logger.info("Token refreshed successfully")
                 except Exception as e:
-                    logger.error(f"Token refresh failed: {e}")
+                    self.logger.error(f"Token refresh failed: {e}")
                     creds = None
 
             if not creds:
                 if not CREDENTIALS_FILE.exists():
-                    logger.error(f"Credentials file not found: {CREDENTIALS_FILE}")
-                    logger.error("Please download OAuth2 credentials from Google Cloud Console")
+                    self.logger.error(f"Credentials file not found: {CREDENTIALS_FILE}")
+                    self.logger.error("Please download OAuth2 credentials from Google Cloud Console")
                     sys.exit(1)
 
                 flow = InstalledAppFlow.from_client_secrets_file(
                     str(CREDENTIALS_FILE), SCOPES
                 )
                 creds = flow.run_local_server(port=0)
-                logger.info("New token obtained successfully")
+                self.logger.info("New token obtained successfully")
 
             # Save credentials for next run
             with open(TOKEN_FILE, 'w') as token:
@@ -119,12 +106,13 @@ class GmailWatcher:
 
         try:
             self.service = build('gmail', 'v1', credentials=creds)
-            logger.info("Gmail API authenticated successfully")
+            self.logger.info("Gmail API authenticated successfully")
         except Exception as e:
-            logger.error(f"Failed to build Gmail service: {e}")
-            sys.exit(1)
+            self.logger.error(f"Failed to build Gmail service: {e}")
+            raise TransientError(f"Failed to build Gmail service: {e}")
 
-    def check_for_updates(self) -> List[Dict]:
+    @with_retry(max_attempts=3, base_delay=1, max_delay=10)
+    def check_for_updates(self) -> List[Any]:
         """Check Gmail for new important/unread emails"""
         try:
             # Query for unread important emails
@@ -143,16 +131,16 @@ class GmailWatcher:
             ]
 
             if new_messages:
-                logger.info(f"Found {len(new_messages)} new email(s)")
+                self.logger.info(f"Found {len(new_messages)} new email(s)")
 
             return new_messages
 
         except HttpError as error:
-            logger.error(f"Gmail API error: {error}")
-            return []
+            self.logger.error(f"Gmail API error: {error}")
+            raise TransientError(f"Gmail API error: {error}")
         except Exception as e:
-            logger.error(f"Error checking for updates: {e}")
-            return []
+            self.logger.error(f"Error checking for updates: {e}")
+            raise TransientError(f"Error checking for updates: {e}")
 
     def get_email_details(self, message_id: str) -> Optional[Dict]:
         """Get full email details"""
@@ -183,9 +171,14 @@ class GmailWatcher:
             logger.error(f"Error getting email details: {e}")
             return None
 
-    def create_action_file(self, email: Dict) -> Optional[Path]:
+    def create_action_file(self, item: Any) -> Optional[Path]:
         """Create action file for email"""
         try:
+            # Get full email details first
+            email = self.get_email_details(item['id'])
+            if not email:
+                return None
+
             headers = email['headers']
             from_addr = headers.get('From', 'Unknown')
             subject = headers.get('Subject', 'No Subject')
@@ -244,15 +237,16 @@ Add processing notes here.
 """
 
             filepath.write_text(content, encoding='utf-8')
-            logger.info(f"Created action file: {filename}")
+            self.logger.info(f"Created action file: {filename}")
 
-            # Log to audit trail
-            self._log_action(email, filepath)
+            # Mark as processed
+            self.processed_ids.add(item['id'])
+            self._save_processed_ids()
 
             return filepath
 
         except Exception as e:
-            logger.error(f"Error creating action file: {e}")
+            self.logger.error(f"Error creating action file: {e}")
             return None
 
     def _log_action(self, email: Dict, filepath: Path):
@@ -267,63 +261,22 @@ Add processing notes here.
             "action_file": str(filepath),
             "status": "pending"
         }
-
-        log_date = datetime.now().strftime("%Y-%m-%d")
-        log_file = LOGS / f"{log_date}.json"
-
-        try:
-            if log_file.exists():
-                with open(log_file, 'r') as f:
-                    logs = json.load(f)
-            else:
-                logs = []
-
-            logs.append(log_entry)
-
-            with open(log_file, 'w') as f:
-                json.dump(logs, f, indent=2)
-        except Exception as e:
-            logger.error(f"Could not write log: {e}")
+        self.log_to_audit(log_entry)
 
     def run(self):
         """Main watcher loop"""
-        logger.info("=" * 60)
-        logger.info("Gmail Watcher Started")
-        logger.info("=" * 60)
-        logger.info(f"Vault: {self.vault_path}")
-        logger.info(f"Check interval: {self.check_interval} seconds")
-        logger.info("=" * 60)
+        self.logger.info("=" * 60)
+        self.logger.info("Gmail Watcher Started")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Vault: {self.vault_path}")
+        self.logger.info(f"Check interval: {self.check_interval} seconds")
+        self.logger.info("=" * 60)
 
         # Authenticate
         self.authenticate()
 
-        try:
-            while True:
-                logger.info("Checking for new emails...")
-
-                # Check for new emails
-                messages = self.check_for_updates()
-
-                # Process each new email
-                for message in messages:
-                    email = self.get_email_details(message['id'])
-                    if email:
-                        self.create_action_file(email)
-                        self.processed_ids.add(message['id'])
-
-                # Save processed IDs
-                if messages:
-                    self._save_processed_ids()
-
-                # Wait before next check
-                time.sleep(self.check_interval)
-
-        except KeyboardInterrupt:
-            logger.info("Stopping Gmail watcher...")
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-        finally:
-            logger.info("Gmail Watcher Stopped")
+        # Use parent class run method
+        super().run()
 
 
 def main():
@@ -341,15 +294,13 @@ def main():
     watcher = GmailWatcher(check_interval=args.interval)
 
     if args.test:
-        logger.info("Running in test mode...")
+        watcher.logger.info("Running in test mode...")
         watcher.authenticate()
         messages = watcher.check_for_updates()
-        logger.info(f"Found {len(messages)} new email(s)")
+        watcher.logger.info(f"Found {len(messages)} new email(s)")
         for msg in messages[:3]:  # Process max 3 in test mode
-            email = watcher.get_email_details(msg['id'])
-            if email:
-                watcher.create_action_file(email)
-        logger.info("Test complete")
+            watcher.create_action_file(msg)
+        watcher.logger.info("Test complete")
     else:
         watcher.run()
 
