@@ -1,2 +1,3 @@
 .env
-.env.template
+credentials.json
+token.json

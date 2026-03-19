@@ -8,10 +8,15 @@ import os
 import sys
 import time
 import json
-import logging
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from base_watcher import BaseWatcher
+from retry_handler import with_retry, TransientError
 
 # Playwright imports
 try:
@@ -23,30 +28,15 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent / "AI_Employee_Vault"
-NEEDS_ACTION = VAULT_PATH / "Needs_Action"
-LOGS = VAULT_PATH / "Logs"
-SESSION_PATH = Path(__file__).parent / "whatsapp_session"
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOGS / "whatsapp_watcher.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("WhatsAppWatcher")
+VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
+SESSION_PATH = Path(__file__).parent.parent.parent.parent / "whatsapp_session"
 
 
-class WhatsAppWatcher:
+class WhatsAppWatcher(BaseWatcher):
     """Monitors WhatsApp Web for urgent messages"""
 
     def __init__(self, vault_path: Path = VAULT_PATH, check_interval: int = 30):
-        self.vault_path = vault_path
-        self.needs_action = vault_path / "Needs_Action"
-        self.check_interval = check_interval
+        super().__init__(vault_path, check_interval, "WhatsAppWatcher")
         self.session_path = SESSION_PATH
 
         # Urgent keywords to monitor
@@ -55,13 +45,15 @@ class WhatsAppWatcher:
         # Track processed messages
         self.processed_messages = set()
 
-        # Ensure folders exist
-        self.needs_action.mkdir(parents=True, exist_ok=True)
-        LOGS.mkdir(parents=True, exist_ok=True)
+        # Ensure session folder exists
         self.session_path.mkdir(parents=True, exist_ok=True)
 
-    def check_for_updates(self, page) -> List[Dict]:
+    @with_retry(max_attempts=2, base_delay=2, max_delay=10)
+    def check_for_updates(self, page=None) -> List[Any]:
         """Check WhatsApp Web for urgent messages"""
+        if page is None:
+            return []
+
         try:
             # Wait for chat list to load
             page.wait_for_selector('[data-testid="chat-list"]', timeout=10000)
@@ -105,31 +97,32 @@ class WhatsAppWatcher:
                                     'id': msg_id
                                 })
                                 self.processed_messages.add(msg_id)
-                                logger.info(f"Urgent message from {chat_name}: {matched_keywords}")
+                                self.logger.info(f"Urgent message from {chat_name}: {matched_keywords}")
 
                     # Go back to chat list
                     page.keyboard.press('Escape')
                     time.sleep(0.5)
 
                 except Exception as e:
-                    logger.warning(f"Error processing chat: {e}")
+                    self.logger.warning(f"Error processing chat: {e}")
                     continue
 
             if urgent_messages:
-                logger.info(f"Found {len(urgent_messages)} urgent message(s)")
+                self.logger.info(f"Found {len(urgent_messages)} urgent message(s)")
 
             return urgent_messages
 
         except PlaywrightTimeout:
-            logger.error("Timeout waiting for WhatsApp Web to load")
-            return []
+            self.logger.error("Timeout waiting for WhatsApp Web to load")
+            raise TransientError("Timeout waiting for WhatsApp Web")
         except Exception as e:
-            logger.error(f"Error checking for updates: {e}")
-            return []
+            self.logger.error(f"Error checking for updates: {e}")
+            raise TransientError(f"Error checking for updates: {e}")
 
-    def create_action_file(self, message: Dict) -> Optional[Path]:
+    def create_action_file(self, item: Any) -> Optional[Path]:
         """Create action file for urgent WhatsApp message"""
         try:
+            message = item
             contact = message['contact']
             text = message['message']
             keywords = message['keywords']
@@ -180,15 +173,12 @@ WhatsApp replies must be sent manually. This watcher is read-only.
 """
 
             filepath.write_text(content, encoding='utf-8')
-            logger.info(f"Created action file: {filename}")
-
-            # Log to audit trail
-            self._log_action(message, filepath)
+            self.logger.info(f"Created action file: {filename}")
 
             return filepath
 
         except Exception as e:
-            logger.error(f"Error creating action file: {e}")
+            self.logger.error(f"Error creating action file: {e}")
             return None
 
     def _log_action(self, message: Dict, filepath: Path):
@@ -202,32 +192,16 @@ WhatsApp replies must be sent manually. This watcher is read-only.
             "action_file": str(filepath),
             "status": "pending"
         }
-
-        log_date = datetime.now().strftime("%Y-%m-%d")
-        log_file = LOGS / f"{log_date}.json"
-
-        try:
-            if log_file.exists():
-                with open(log_file, 'r') as f:
-                    logs = json.load(f)
-            else:
-                logs = []
-
-            logs.append(log_entry)
-
-            with open(log_file, 'w') as f:
-                json.dump(logs, f, indent=2)
-        except Exception as e:
-            logger.error(f"Could not write log: {e}")
+        self.log_to_audit(log_entry)
 
     def setup_session(self):
         """Initial setup - scan QR code"""
-        logger.info("=" * 60)
-        logger.info("WhatsApp Web Setup")
-        logger.info("=" * 60)
-        logger.info("Opening WhatsApp Web for QR code scan...")
-        logger.info("Please scan the QR code with your phone")
-        logger.info("=" * 60)
+        self.logger.info("=" * 60)
+        self.logger.info("WhatsApp Web Setup")
+        self.logger.info("=" * 60)
+        self.logger.info("Opening WhatsApp Web for QR code scan...")
+        self.logger.info("Please scan the QR code with your phone")
+        self.logger.info("=" * 60)
 
         with sync_playwright() as p:
             browser = p.chromium.launch_persistent_context(
@@ -238,27 +212,27 @@ WhatsApp replies must be sent manually. This watcher is read-only.
             page.goto('https://web.whatsapp.com')
 
             # Wait for user to scan QR code
-            logger.info("Waiting for QR code scan...")
+            self.logger.info("Waiting for QR code scan...")
             try:
                 page.wait_for_selector('[data-testid="chat-list"]', timeout=120000)
-                logger.info("✓ Successfully logged in!")
-                logger.info("Session saved. You can now run the watcher.")
+                self.logger.info("✓ Successfully logged in!")
+                self.logger.info("Session saved. You can now run the watcher.")
                 time.sleep(3)
             except PlaywrightTimeout:
-                logger.error("Timeout waiting for login. Please try again.")
+                self.logger.error("Timeout waiting for login. Please try again.")
 
             browser.close()
 
     def run(self, headless: bool = True):
-        """Main watcher loop"""
-        logger.info("=" * 60)
-        logger.info("WhatsApp Watcher Started")
-        logger.info("=" * 60)
-        logger.info(f"Vault: {self.vault_path}")
-        logger.info(f"Check interval: {self.check_interval} seconds")
-        logger.info(f"Keywords: {', '.join(self.keywords)}")
-        logger.info(f"Headless: {headless}")
-        logger.info("=" * 60)
+        """Main watcher loop with Playwright"""
+        self.logger.info("=" * 60)
+        self.logger.info("WhatsApp Watcher Started")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Vault: {self.vault_path}")
+        self.logger.info(f"Check interval: {self.check_interval} seconds")
+        self.logger.info(f"Keywords: {', '.join(self.keywords)}")
+        self.logger.info(f"Headless: {headless}")
+        self.logger.info("=" * 60)
 
         with sync_playwright() as p:
             try:
@@ -270,13 +244,13 @@ WhatsApp replies must be sent manually. This watcher is read-only.
                 page.goto('https://web.whatsapp.com')
 
                 # Wait for initial load
-                logger.info("Waiting for WhatsApp Web to load...")
+                self.logger.info("Waiting for WhatsApp Web to load...")
                 page.wait_for_selector('[data-testid="chat-list"]', timeout=30000)
-                logger.info("✓ WhatsApp Web loaded successfully")
+                self.logger.info("✓ WhatsApp Web loaded successfully")
 
                 # Main monitoring loop
                 while True:
-                    logger.info("Checking for urgent messages...")
+                    self.logger.info("Checking for urgent messages...")
 
                     # Check for urgent messages
                     messages = self.check_for_updates(page)
@@ -289,17 +263,17 @@ WhatsApp replies must be sent manually. This watcher is read-only.
                     time.sleep(self.check_interval)
 
             except KeyboardInterrupt:
-                logger.info("Stopping WhatsApp watcher...")
+                self.logger.info("Stopping WhatsApp watcher...")
             except PlaywrightTimeout:
-                logger.error("WhatsApp Web session expired. Please run --setup again.")
+                self.logger.error("WhatsApp Web session expired. Please run --setup again.")
             except Exception as e:
-                logger.error(f"Unexpected error: {e}")
+                self.logger.error(f"Unexpected error: {e}")
             finally:
                 try:
                     browser.close()
                 except:
                     pass
-                logger.info("WhatsApp Watcher Stopped")
+                self.logger.info("WhatsApp Watcher Stopped")
 
 
 def main():
@@ -323,7 +297,7 @@ def main():
     if args.setup:
         watcher.setup_session()
     elif args.test:
-        logger.info("Running in test mode...")
+        watcher.logger.info("Running in test mode...")
         with sync_playwright() as p:
             browser = p.chromium.launch_persistent_context(
                 user_data_dir=str(watcher.session_path),
@@ -333,11 +307,11 @@ def main():
             page.goto('https://web.whatsapp.com')
             page.wait_for_selector('[data-testid="chat-list"]', timeout=30000)
             messages = watcher.check_for_updates(page)
-            logger.info(f"Found {len(messages)} urgent message(s)")
+            watcher.logger.info(f"Found {len(messages)} urgent message(s)")
             for msg in messages:
                 watcher.create_action_file(msg)
             browser.close()
-        logger.info("Test complete")
+        watcher.logger.info("Test complete")
     else:
         watcher.run(headless=args.headless)
 

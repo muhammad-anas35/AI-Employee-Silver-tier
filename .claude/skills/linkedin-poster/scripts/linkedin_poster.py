@@ -13,6 +13,11 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from rate_limiter import RateLimiter
+
 # Playwright imports for automation approach
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -22,13 +27,13 @@ except ImportError:
     print("Warning: Playwright not installed. Install with: pip install playwright")
 
 # Configuration
-VAULT_PATH = Path(__file__).parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
 PLANS = VAULT_PATH / "Plans"
 PENDING_APPROVAL = VAULT_PATH / "Pending_Approval"
 APPROVED = VAULT_PATH / "Approved"
 DONE = VAULT_PATH / "Done"
 LOGS = VAULT_PATH / "Logs"
-SESSION_PATH = Path(__file__).parent / "linkedin_session"
+SESSION_PATH = Path(__file__).parent.parent.parent.parent / "linkedin_session"
 
 # Setup logging
 logging.basicConfig(
@@ -52,6 +57,9 @@ class LinkedInPoster:
         self.approved = vault_path / "Approved"
         self.done = vault_path / "Done"
         self.session_path = SESSION_PATH
+
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter()
 
         # Ensure folders exist
         for folder in [self.plans, self.pending_approval, self.approved, self.done, LOGS]:
@@ -154,6 +162,12 @@ Add any notes or modifications here before approval.
     def publish_post(self, post_file: Path, use_api: bool = False) -> bool:
         """Publish approved post to LinkedIn"""
         try:
+            # Check rate limit before posting
+            can_post, wait_time = self.rate_limiter.can_perform("linkedin_post")
+            if not can_post:
+                logger.error(f"Rate limit exceeded. Wait {wait_time:.0f} seconds before posting.")
+                return False
+
             # Read post content
             content = post_file.read_text(encoding='utf-8')
 
@@ -181,6 +195,9 @@ Add any notes or modifications here before approval.
                 success = self._publish_via_playwright(post_text)
 
             if success:
+                # Record action in rate limiter
+                self.rate_limiter.record_action("linkedin_post")
+
                 # Move to Done
                 done_file = self.done / post_file.name
                 post_file.rename(done_file)

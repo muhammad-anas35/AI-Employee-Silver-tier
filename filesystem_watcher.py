@@ -7,38 +7,37 @@ Monitors a drop folder and creates action files in Needs_Action
 import os
 import sys
 import time
-import logging
 import json
 from pathlib import Path
 from datetime import datetime
+from typing import List, Optional, Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from base_watcher import BaseWatcher
+from retry_handler import with_retry
+
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent / "AI_Employee_Vault"
 DROP_FOLDER = Path.home() / "AI_Employee_Drop"
-NEEDS_ACTION = VAULT_PATH / "Needs_Action"
 PROCESSED_FILE = VAULT_PATH / ".processed_files"
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(VAULT_PATH / "Logs" / "watcher.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("FileSystemWatcher")
 
+class FileSystemWatcher(BaseWatcher):
+    """Monitors drop folder for new files"""
 
-class DropFolderHandler(FileSystemEventHandler):
-    """Handles file system events in the drop folder"""
-
-    def __init__(self, vault_path: Path):
-        self.vault_path = vault_path
-        self.needs_action = vault_path / "Needs_Action"
+    def __init__(self, vault_path: Path = VAULT_PATH, check_interval: int = 5):
+        super().__init__(vault_path, check_interval, "FileSystemWatcher")
+        self.drop_folder = DROP_FOLDER
         self.processed_files = self._load_processed_files()
+        self.pending_files = []
+
+        # Ensure drop folder exists
+        self.drop_folder.mkdir(parents=True, exist_ok=True)
+        self.logger.info(f"Drop folder ready: {self.drop_folder}")
 
     def _load_processed_files(self) -> set:
         """Load set of already processed files"""
@@ -47,7 +46,7 @@ class DropFolderHandler(FileSystemEventHandler):
                 with open(PROCESSED_FILE, 'r') as f:
                     return set(json.load(f))
             except Exception as e:
-                logger.warning(f"Could not load processed files: {e}")
+                self.logger.warning(f"Could not load processed files: {e}")
         return set()
 
     def _save_processed_files(self):
@@ -56,54 +55,62 @@ class DropFolderHandler(FileSystemEventHandler):
             with open(PROCESSED_FILE, 'w') as f:
                 json.dump(list(self.processed_files), f)
         except Exception as e:
-            logger.error(f"Could not save processed files: {e}")
+            self.logger.error(f"Could not save processed files: {e}")
 
-    def on_created(self, event):
-        """Handle file creation events"""
-        if event.is_directory:
-            return
-
-        source_path = Path(event.src_path)
-
-        # Skip hidden files and system files
-        if source_path.name.startswith('.'):
-            return
-
-        # Skip if already processed
-        if str(source_path) in self.processed_files:
-            return
-
+    @with_retry(max_attempts=2, base_delay=1, max_delay=5)
+    def check_for_updates(self) -> List[Any]:
+        """Check drop folder for new files"""
         try:
-            # Wait a moment for file to be fully written
-            time.sleep(0.5)
+            new_files = []
 
-            if not source_path.exists():
-                return
+            # Check all files in drop folder
+            if not self.drop_folder.exists():
+                return []
 
-            logger.info(f"New file detected: {source_path.name}")
-            self._create_action_file(source_path)
+            for file_path in self.drop_folder.iterdir():
+                # Skip directories and hidden files
+                if file_path.is_dir() or file_path.name.startswith('.'):
+                    continue
 
-            # Mark as processed
-            self.processed_files.add(str(source_path))
-            self._save_processed_files()
+                # Skip if already processed
+                if str(file_path) in self.processed_files:
+                    continue
+
+                # Check if file is fully written (size stable)
+                try:
+                    size1 = file_path.stat().st_size
+                    time.sleep(0.5)
+                    size2 = file_path.stat().st_size
+
+                    if size1 == size2:  # File is stable
+                        new_files.append(file_path)
+                        self.logger.info(f"New file detected: {file_path.name}")
+                except Exception as e:
+                    self.logger.warning(f"Error checking file {file_path}: {e}")
+                    continue
+
+            return new_files
 
         except Exception as e:
-            logger.error(f"Error processing file {source_path}: {e}")
+            self.logger.error(f"Error checking for updates: {e}")
+            return []
 
-    def _create_action_file(self, source_path: Path):
+    def create_action_file(self, item: Any) -> Optional[Path]:
         """Create a markdown action file for the dropped file"""
+        try:
+            source_path = item
 
-        # Get file info
-        file_size = source_path.stat().st_size
-        file_ext = source_path.suffix
-        timestamp = datetime.now().isoformat()
+            # Get file info
+            file_size = source_path.stat().st_size
+            file_ext = source_path.suffix
+            timestamp = datetime.now().isoformat()
 
-        # Create action file name
-        action_filename = f"FILE_{source_path.stem}_{int(time.time())}.md"
-        action_filepath = self.needs_action / action_filename
+            # Create action file name
+            action_filename = f"FILE_{source_path.stem}_{int(time.time())}.md"
+            action_filepath = self.needs_action / action_filename
 
-        # Create markdown content
-        content = f"""---
+            # Create markdown content
+            content = f"""---
 type: file_drop
 original_name: {source_path.name}
 file_path: {source_path}
@@ -138,78 +145,45 @@ A new file has been dropped for processing.
 Add any processing notes here.
 """
 
-        # Write action file
-        action_filepath.write_text(content)
-        logger.info(f"Created action file: {action_filename}")
+            # Write action file
+            action_filepath.write_text(content)
+            self.logger.info(f"Created action file: {action_filename}")
 
-        # Log to audit
-        self._log_action(source_path, action_filepath)
+            # Mark as processed
+            self.processed_files.add(str(source_path))
+            self._save_processed_files()
 
-    def _log_action(self, source_path: Path, action_filepath: Path):
-        """Log the file drop event"""
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "action_type": "file_drop_detected",
-            "actor": "filesystem_watcher",
-            "source_file": str(source_path),
-            "action_file": str(action_filepath),
-            "file_size": source_path.stat().st_size,
-            "status": "pending"
-        }
+            return action_filepath
 
-        # Append to daily log
-        log_date = datetime.now().strftime("%Y-%m-%d")
-        log_file = self.vault_path / "Logs" / f"{log_date}.json"
-
-        try:
-            if log_file.exists():
-                with open(log_file, 'r') as f:
-                    logs = json.load(f)
-            else:
-                logs = []
-
-            logs.append(log_entry)
-
-            with open(log_file, 'w') as f:
-                json.dump(logs, f, indent=2)
         except Exception as e:
-            logger.error(f"Could not write log: {e}")
+            self.logger.error(f"Error creating action file: {e}")
+            return None
 
 
-def ensure_drop_folder():
-    """Ensure drop folder exists"""
-    DROP_FOLDER.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Drop folder ready: {DROP_FOLDER}")
+def main():
+    """Main entry point"""
+    import argparse
 
+    parser = argparse.ArgumentParser(description='File System Watcher for AI Employee')
+    parser.add_argument('--interval', type=int, default=5,
+                        help='Check interval in seconds (default: 5)')
+    parser.add_argument('--test', action='store_true',
+                        help='Test mode: check once and exit')
 
-def run_watcher():
-    """Start the file system watcher"""
+    args = parser.parse_args()
 
-    ensure_drop_folder()
+    watcher = FileSystemWatcher(check_interval=args.interval)
 
-    logger.info("=" * 60)
-    logger.info("File System Watcher Started")
-    logger.info("=" * 60)
-    logger.info(f"Monitoring: {DROP_FOLDER}")
-    logger.info(f"Vault: {VAULT_PATH}")
-    logger.info(f"Action folder: {NEEDS_ACTION}")
-    logger.info("=" * 60)
-
-    event_handler = DropFolderHandler(VAULT_PATH)
-    observer = Observer()
-    observer.schedule(event_handler, str(DROP_FOLDER), recursive=False)
-    observer.start()
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Stopping watcher...")
-        observer.stop()
-    observer.join()
-
-    logger.info("File System Watcher Stopped")
+    if args.test:
+        watcher.logger.info("Running in test mode...")
+        files = watcher.check_for_updates()
+        watcher.logger.info(f"Found {len(files)} new file(s)")
+        for file in files:
+            watcher.create_action_file(file)
+        watcher.logger.info("Test complete")
+    else:
+        watcher.run()
 
 
 if __name__ == "__main__":
-    run_watcher()
+    main()
