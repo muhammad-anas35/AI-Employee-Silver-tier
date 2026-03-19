@@ -18,7 +18,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from rate_limiter import RateLimiter
 

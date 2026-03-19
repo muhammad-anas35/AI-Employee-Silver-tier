@@ -1,0 +1,5 @@
+2026-03-19 23:20:59,084 - GmailWatcher - INFO - Running in test mode...
+2026-03-19 23:21:52,614 - GmailWatcher - INFO - New token obtained successfully
+2026-03-19 23:21:52,640 - GmailWatcher - INFO - Gmail API authenticated successfully
+2026-03-19 23:21:53,773 - GmailWatcher - INFO - Found 0 new email(s)
+2026-03-19 23:21:53,773 - GmailWatcher - INFO - Test complete

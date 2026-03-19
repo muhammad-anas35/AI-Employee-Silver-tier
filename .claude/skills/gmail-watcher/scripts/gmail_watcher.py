@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from base_watcher import BaseWatcher
 from retry_handler import with_retry, TransientError
@@ -31,10 +31,10 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
-CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent / "credentials.json"
-TOKEN_FILE = Path(__file__).parent.parent.parent.parent / "token.json"
-PROCESSED_FILE = Path(__file__).parent.parent.parent.parent / ".processed_emails"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent.parent / "AI_Employee_Vault"
+CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent.parent / "client_secret_546836721365-jsqg49259347e8l9kghrq80o9j3htrql.apps.googleusercontent.com.json"
+TOKEN_FILE = Path(__file__).parent.parent.parent.parent.parent / "token.json"
+PROCESSED_FILE = Path(__file__).parent.parent.parent.parent.parent / ".processed_emails"
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -44,7 +44,7 @@ class GmailWatcher(BaseWatcher):
     """Monitors Gmail inbox for important emails"""
 
     def __init__(self, vault_path: Path = VAULT_PATH, check_interval: int = 120):
-        super().__init__(vault_path, check_interval, "GmailWatcher")
+        super().__init__(vault_path, check_interval)
         self.service = None
         self.processed_ids = self._load_processed_ids()
 

@@ -1,0 +1,16 @@
+2026-03-19 23:36:17,944 - EmailSender - ERROR - Credentials file not found: D:\Coding world\Hackathone_0\Silver\.claude\credentials.json
+2026-03-19 23:36:17,944 - EmailSender - ERROR - Please download OAuth2 credentials from Google Cloud Console
+2026-03-19 23:38:40,760 - google_auth_oauthlib.flow - INFO - "GET /?state=15xrsz7DDJgtInmB539uOtLIRNabiH&iss=https://accounts.google.com&code=4/0AfrIepC-yx1ndTIni3C7sBHfs8y6s4xh2QSl92-60aR33JOu9hqeRRtR5sT8G33xrt9nig&scope=https://www.googleapis.com/auth/gmail.send%20https://www.googleapis.com/auth/gmail.compose%20https://www.googleapis.com/auth/gmail.readonly HTTP/1.1" 200 65
+2026-03-19 23:38:42,725 - EmailSender - INFO - New token obtained successfully
+2026-03-19 23:38:42,731 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-03-19 23:38:42,738 - EmailSender - INFO - Gmail API authenticated successfully
+2026-03-19 23:38:42,741 - EmailSender - INFO - Approval required: New contact (alibahi353570@gmail.com)
+2026-03-19 23:38:42,742 - EmailSender - INFO - Created email request: EMAIL_alibahi353570_1773945522.md (status: pending_approval)
+2026-03-19 23:38:42,743 - EmailSender - INFO - Email request created: D:\Coding world\Hackathone_0\Silver\.claude\AI_Employee_Vault\Pending_Approval\EMAIL_alibahi353570_1773945522.md
+2026-03-19 23:38:42,743 - EmailSender - INFO - Approval required. Move to /Approved/ to send.
+2026-03-19 23:39:58,385 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-03-19 23:39:58,387 - EmailSender - INFO - Gmail API authenticated successfully
+2026-03-19 23:39:58,387 - EmailSender - INFO - Approval required: New contact (alibahi353570@gmail.com)
+2026-03-19 23:39:58,388 - EmailSender - INFO - Created email request: EMAIL_alibahi353570_1773945598.md (status: pending_approval)
+2026-03-19 23:39:58,400 - EmailSender - INFO - Email request created: D:\Coding world\Hackathone_0\Silver\.claude\AI_Employee_Vault\Pending_Approval\EMAIL_alibahi353570_1773945598.md
+2026-03-19 23:39:58,401 - EmailSender - INFO - Approval required. Move to /Approved/ to send.
