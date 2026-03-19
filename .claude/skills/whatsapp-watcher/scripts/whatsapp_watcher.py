@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from base_watcher import BaseWatcher
 from retry_handler import with_retry, TransientError
@@ -28,8 +28,8 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
-SESSION_PATH = Path(__file__).parent.parent.parent.parent / "whatsapp_session"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent.parent / "AI_Employee_Vault"
+SESSION_PATH = Path(__file__).parent.parent.parent.parent.parent / "whatsapp_session"
 
 
 class WhatsAppWatcher(BaseWatcher):

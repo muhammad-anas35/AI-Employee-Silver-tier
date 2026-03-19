@@ -35,14 +35,14 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent.parent / "AI_Employee_Vault"
 PLANS = VAULT_PATH / "Plans"
 PENDING_APPROVAL = VAULT_PATH / "Pending_Approval"
 APPROVED = VAULT_PATH / "Approved"
 DONE = VAULT_PATH / "Done"
 LOGS = VAULT_PATH / "Logs"
-CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent / "credentials.json"
-TOKEN_FILE = Path(__file__).parent.parent.parent.parent / "token.json"
+CREDENTIALS_FILE = Path(__file__).parent.parent.parent.parent.parent / "client_secret_546836721365-jsqg49259347e8l9kghrq80o9j3htrql.apps.googleusercontent.com.json"
+TOKEN_FILE = Path(__file__).parent.parent.parent.parent.parent / "token.json"
 KNOWN_CONTACTS_FILE = VAULT_PATH / "known_contacts.json"
 
 # Gmail API scopes (includes send permission)

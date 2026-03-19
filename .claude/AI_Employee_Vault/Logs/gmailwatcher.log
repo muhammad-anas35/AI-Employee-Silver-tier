@@ -1,3 +1,0 @@
-2026-03-19 23:19:58,235 - GmailWatcher - INFO - Running in test mode...
-2026-03-19 23:19:58,235 - GmailWatcher - ERROR - Credentials file not found: D:\Coding world\Hackathone_0\Silver\.claude\credentials.json
-2026-03-19 23:19:58,235 - GmailWatcher - ERROR - Please download OAuth2 credentials from Google Cloud Console

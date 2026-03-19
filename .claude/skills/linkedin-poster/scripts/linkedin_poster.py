@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from rate_limiter import RateLimiter
 
@@ -27,7 +27,7 @@ except ImportError:
     print("Warning: Playwright not installed. Install with: pip install playwright")
 
 # Configuration
-VAULT_PATH = Path(__file__).parent.parent.parent.parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent.parent / "AI_Employee_Vault"
 PLANS = VAULT_PATH / "Plans"
 PENDING_APPROVAL = VAULT_PATH / "Pending_Approval"
 APPROVED = VAULT_PATH / "Approved"

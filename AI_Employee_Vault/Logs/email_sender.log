@@ -1,0 +1,5 @@
+2026-03-20 02:13:07,097 - EmailSender - ERROR - Token refresh failed: ('invalid_scope: Bad Request', {'error': 'invalid_scope', 'error_description': 'Bad Request'})
+2026-03-20 02:13:07,101 - EmailSender - ERROR - Credentials file not found: D:\Coding world\Hackathone_0\Silver\client_secret_546836721365-jsqg49259347e8l9kghrq80o9j3htrql.apps.googleusercontent.com.json
+2026-03-20 02:13:07,101 - EmailSender - ERROR - Please download OAuth2 credentials from Google Cloud Console
+2026-03-20 02:13:25,408 - EmailSender - ERROR - Credentials file not found: D:\Coding world\Hackathone_0\Silver\client_secret_546836721365-jsqg49259347e8l9kghrq80o9j3htrql.apps.googleusercontent.com.json
+2026-03-20 02:13:25,409 - EmailSender - ERROR - Please download OAuth2 credentials from Google Cloud Console
