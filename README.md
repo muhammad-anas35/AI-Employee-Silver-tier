@@ -1,8 +1,25 @@
 # Personal AI Employee - Silver Tier Implementation
 
+**Developer:** Muhammad Anas Asif 
+
+**LinkedIn:** [https://www.linkedin.com/in/muhammad-anas35/](https://www.linkedin.com/in/muhammad-anas35/)
+
 **Status:** 🎉 100% Complete - Ready for Hackathon Submission
 **Last Updated:** 2026-03-24
 **Silver Tier:** 8/8 Requirements Met (100%)
+
+---
+
+## 👨‍💻 About the Developer
+
+**Muhammad Anas Asif** is a software developer specializing in AI automation and intelligent systems. This Silver Tier AI Employee implementation demonstrates expertise in:
+- Autonomous agent systems and workflow automation
+- Gmail API integration with OAuth2 authentication
+- Human-in-the-loop approval workflows
+- Python development with clean architecture patterns
+- Claude Code integration and Agent Skills development
+
+Connect on LinkedIn: [Muhammad Anas Asif](https://www.linkedin.com/in/muhammad-anas35/)
 
 ---
 

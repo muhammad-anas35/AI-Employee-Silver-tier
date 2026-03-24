@@ -1,8 +1,26 @@
 # 🚀 Silver Tier AI Employee - Complete Project Guide
 
+**Developer:** Muhammad Anas Asif
+
+**LinkedIn:** [https://www.linkedin.com/in/muhammad-anas35/](https://www.linkedin.com/in/muhammad-anas35/)
+
 **Project Status:** ✅ 100% Complete & Ready for Submission
 **Last Updated:** 2026-03-24
 **Tier:** Silver (8/8 Requirements Met)
+
+---
+
+## 👨‍💻 About the Developer
+
+This Silver Tier AI Employee system was designed and developed by **Muhammad Anas Asif**, a software developer passionate about AI automation and intelligent agent systems. This project showcases:
+
+- **Autonomous Workflow Automation** - Self-managing email and task processing
+- **Secure API Integration** - Gmail API with OAuth2 authentication
+- **Human-in-the-Loop Design** - Smart approval workflows for sensitive actions
+- **Clean Architecture** - BaseWatcher pattern, retry logic, rate limiting
+- **Production-Ready Code** - 5,000+ lines with comprehensive error handling
+
+**Connect:** [LinkedIn Profile](https://www.linkedin.com/in/muhammad-anas35/)
 
 ---
 
@@ -335,9 +353,10 @@ python .claude/skills/orchestrator/scripts/orchestrator.py
 **What to Show:**
 
 **Part 1: Introduction (30 sec)**
-- Your name
+- Your name: "Hi, I'm Muhammad Anas Asif"
 - "Silver Tier AI Employee Implementation"
-- Quick overview
+- Quick overview: "I built an autonomous AI assistant that monitors Gmail, processes tasks, and sends emails with human approval"
+- "Connect with me on LinkedIn" (show link briefly)
 
 **Part 2: Architecture (1 min)**
 - Show README.md
@@ -376,8 +395,10 @@ python .claude/skills/send-email/scripts/send_email.py --send-approved
 - Show Logs/ (audit trail)
 
 **Part 5: Conclusion (30 sec)**
-- "8/8 requirements met"
-- "Ready for production"
+- "That's my Silver Tier implementation"
+- "All 8 requirements met, working features demonstrated, and ready for production"
+- "I'm Muhammad Anas Asif, and you can connect with me on LinkedIn"
+- Show LinkedIn URL: https://www.linkedin.com/in/muhammad-anas35/
 - "Thank you!"
 
 ### Recording Tools
