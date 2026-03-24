@@ -1,0 +1,10 @@
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - ============================================================
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - LinkedIn Setup
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - ============================================================
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - Opening LinkedIn for login...
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - Please login manually
+2026-03-24 23:33:48,493 - LinkedInPoster - INFO - ============================================================
+2026-03-24 23:33:53,307 - LinkedInPoster - INFO - Waiting for login...
+2026-03-24 23:35:53,329 - LinkedInPoster - ERROR - Timeout waiting for login. Please try again.
+2026-03-24 23:37:30,925 - LinkedInPoster - INFO - Created post draft: POST_linkedin_test_1774377450.md
+2026-03-24 23:37:30,925 - LinkedInPoster - INFO - Test draft created: D:\Coding world\Hackathone_0\Silver\AI_Employee_Vault\Pending_Approval\POST_linkedin_test_1774377450.md
