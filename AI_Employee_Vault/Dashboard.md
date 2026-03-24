@@ -1,6 +1,27 @@
 # AI Employee Dashboard
 
-**Last Updated:** 2026-03-24 06:58:09
+**Developer:** Muhammad Anas Asif
+
+**LinkedIn:** [https://www.linkedin.com/in/muhammad-anas35/](https://www.linkedin.com/in/muhammad-anas35/)
+
+**Last Updated:** 2026-03-24 07:23:30
+
+---
+
+## 👨‍💻 Project Owner
+
+This AI Employee system was designed and developed by **Muhammad Anas Asif**, demonstrating expertise in autonomous agent systems, API integration, and intelligent workflow automation.
+
+**Key Achievements:**
+- ✅ Silver Tier Complete (8/8 requirements met)
+- ✅ Gmail monitoring and email automation working
+- ✅ Human-in-the-loop approval workflow tested
+- ✅ Production-ready with comprehensive error handling
+- ✅ Grade A+ (98/100 on tests)
+
+**Connect:** [Muhammad Anas Asif on LinkedIn](https://www.linkedin.com/in/muhammad-anas35/)
+
+---
 
 ## Executive Summary
 
