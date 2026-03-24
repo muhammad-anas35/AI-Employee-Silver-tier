@@ -17,9 +17,9 @@ from typing import Dict, List, Optional
 import psutil
 
 # Configuration
-VAULT_PATH = Path(__file__).parent / "AI_Employee_Vault"
+VAULT_PATH = Path(__file__).parent.parent.parent.parent.parent / "AI_Employee_Vault"
 LOGS = VAULT_PATH / "Logs"
-CONFIG_FILE = Path(__file__).parent / "orchestrator_config.json"
+CONFIG_FILE = Path(__file__).parent.parent.parent.parent.parent / "orchestrator_config.json"
 
 # Setup logging
 logging.basicConfig(
