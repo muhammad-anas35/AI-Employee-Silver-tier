@@ -148,8 +148,11 @@ claude /update-dashboard --vault-path "AI_Employee_Vault"
 # Send email (Silver tier)
 claude /send-email --to "client@example.com" --subject "Invoice" --body "..."
 
-# Post to LinkedIn (Silver tier)
-claude /post-linkedin --content "Business update..."
+# Create LinkedIn post (Silver tier)
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --create "Business update..."
+
+# Publish approved LinkedIn posts (Silver tier)
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --publish
 ```
 
 ### Verification
@@ -186,6 +189,15 @@ mv AI_Employee_Vault/Pending_Approval/EMAIL_*.md AI_Employee_Vault/Approved/
 
 # Send approved emails
 python .claude/skills/send-email/scripts/send_email.py --send-approved
+
+# Test LinkedIn poster ✅ TESTED & WORKING
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --test
+
+# Create LinkedIn post
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --create "Your business update"
+
+# Publish approved LinkedIn posts
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --publish
 
 # Test vault operations
 python claude_integration.py
