@@ -45,7 +45,15 @@
 ### Create a Post Draft
 ```bash
 python .claude/skills/linkedin-poster/scripts/linkedin_poster.py \
-  --content "Your professional update here"
+  --create "Your professional update here"
+```
+
+### Create with Category and Schedule
+```bash
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py \
+  --create "Your business update" \
+  --category "business_update" \
+  --schedule "2026-03-26T09:00:00"
 ```
 
 ### Test Post Creation
@@ -53,12 +61,12 @@ python .claude/skills/linkedin-poster/scripts/linkedin_poster.py \
 python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --test
 ```
 
-### Post Approved Content
+### Publish Approved Posts
 ```bash
-python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --post-approved
+python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --publish
 ```
 
-### Setup LinkedIn Login (Optional)
+### Setup LinkedIn Login
 ```bash
 python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --setup
 ```
@@ -150,7 +158,7 @@ The LinkedIn poster is integrated with the orchestrator:
 1. **Create a post:**
    ```bash
    python .claude/skills/linkedin-poster/scripts/linkedin_poster.py \
-     --content "Your business update"
+     --create "Your business update"
    ```
 
 2. **Review draft:**
@@ -162,9 +170,9 @@ The LinkedIn poster is integrated with the orchestrator:
    mv AI_Employee_Vault/Pending_Approval/POST_*.md AI_Employee_Vault/Approved/
    ```
 
-4. **Post (manual):**
+4. **Publish approved posts:**
    ```bash
-   python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --post-approved
+   python .claude/skills/linkedin-poster/scripts/linkedin_poster.py --publish
    ```
 
    **Or let orchestrator handle it automatically**
