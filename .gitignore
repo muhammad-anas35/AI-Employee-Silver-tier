@@ -5,3 +5,4 @@ token.json
 whatsapp_session/
 AI_Employee_Vault/Pending_Approval/POST_*.md
 AI_Employee_Vault/Approved/POST_*.md
+.claude/linkedin_session/
